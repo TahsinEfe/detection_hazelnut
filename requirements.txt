@@ -1,0 +1,8 @@
+inference==1.2.0
+numpy==2.3.5
+opencv-python-headless==4.13.0.92
+pillow==11.3.0
+requests==2.33.1
+supervision==0.27.0.post2
+matplotlib==3.10.8
+python-dotenv==1.0.1
