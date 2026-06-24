@@ -40,9 +40,6 @@ Below are sample outputs from the pipeline, using the images stored in `result_i
 
 ### Detection and Classification Results
 
-![Result 1](result_images/20260614_03h58m40s_grim.png)
-*Sample detection output with bounding box and classification result.*
-
 ![Result 2](result_images/Screenshot%202026-06-24%20at%2016.52.23.png)
 *Example UI overlay showing detected hazelnut type.*
 
