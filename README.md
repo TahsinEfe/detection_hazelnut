@@ -1,108 +1,101 @@
 # Hazelnut Detection & Classification System
 
-This project is a computer vision system that detects and classifies hazelnuts (e.g., determining their types or health status) in real-time using a camera feed. The system leverages the Roboflow Inference infrastructure and utilizes OpenCV for real-time video processing. It features optimized configuration options for various environments, such as high-performance Desktop PCs or constrained devices like Raspberry Pis.
+This project is a computer vision system that detects and classifies hazelnuts in real time using a camera feed. It leverages Roboflow Inference and OpenCV, and it is organized into modular components so the detection, classification, and decision logic can be maintained independently.
 
-## Architecture & Layers
+## Architecture & Core Classes
 
-The project has a robust and clean architecture where tasks are separated into modular, independent classes:
+The repository is built around a clean, layered architecture with clearly separated responsibilities:
 
-### 1. Configuration Layer (`config.py`)
-This central configuration layer stores environment-specific operational parameters (confidence thresholds, bounding box size limits, etc.) for both `desktop` and `raspberry_pi` settings, as well as necessary API keys.
+### `config.py` — Configuration Layer
+- Stores API keys, model identifiers, environment flags, and operational thresholds.
+- Supports both `desktop` and `raspberry_pi` modes with device-specific settings.
 
-### 2. Detection Layer (`detector.py`)
-- **`HazelnutDetector` Class**: Responsible for finding the positions (bounding boxes) of hazelnuts in the image and calculating their detection confidence scores. It operates as an independent module, meaning the underlying detection model can be easily swapped out.
+### `detector.py` — Detection Layer
+- **`HazelnutDetector`** detects hazelnut locations in the input image.
+- Uses a Roboflow detection endpoint to return the highest-confidence bounding box.
+- Outputs a normalized bounding box and a confidence score.
 
-### 3. Classification Layer (`classifier.py`)
-- **`HazelnutClassifier` Class**: Analyzes the cropped hazelnut images extracted by the detector and performs classification. It applies preprocessing to adapt the image for the classification model and returns the in-class prediction confidence levels.
+### `classifier.py` — Classification Layer
+- **`HazelnutClassifier`** classifies the cropped hazelnut image.
+- Preprocesses the crop for the classification model and sends it to Roboflow.
+- Returns top prediction, all class confidences, and raw model output.
 
-### 4. Decision Engine Layer (`decision.py`)
-- **`DecisionEngine` Class**: Acts as the ultimate "judge" layer, auditing and validating the outputs from both the detection and classification steps.
-  - **Detection Validation**: Verifies the bounding box area and aspect ratio against configured constraints.
-  - **Classification Validation**: Evaluates classification confidence scores and the margin between the Top-1 and Top-2 predictions to produce the final valid/invalid decision. This prevents false classifications caused by improper crops or misleading backgrounds.
+### `decision.py` — Decision Engine Layer
+- **`DecisionEngine`** validates both detection and classification results.
+- Detection validation checks bounding box size, aspect ratio, and confidence.
+- Classification validation checks prediction confidence and top-1/top-2 margin.
+- Produces a final decision of either a valid hazelnut class or `invalid`.
 
-### 5. Application & Interface Layer (`main.py`)
-Houses the main operational pipeline loop. It captures real-time frames from the webcam, sequentially triggers detection, cropping, classification, and the decision mechanisms, and then feeds the results back to the screen live via OpenCV (including bounding boxes, text labels, and color codes).
+### `main.py` — Application Layer
+- Runs the main camera loop.
+- Captures frames, calls the detector, crops the result, classifies the crop, and applies decision logic.
+- Displays bounding boxes and live status text using OpenCV.
 
-### 6. Utility Functions (`utils.py`)
-Contains the central logic and helper functions used to prepare images for the models (e.g., cropping, scaling, padding), such as the `prepare_for_type_model` function.
+### `utils.py` — Utility Helpers
+- Contains reusable image preprocessing utilities such as `prepare_for_type_model`.
+- Keeps the model pipelines consistent by centralizing resize, padding, and normalization logic.
 
-##  Model Training (Roboflow)
+## Example Result Images
+Below are sample outputs from the pipeline, using the images stored in `result_images/`.
 
-The detection and classification models were trained using Roboflow, following a structured pipeline:
+### Detection and Classification Results
 
-### 1. Dataset Preparation
-- Images of hazelnuts were collected from real-world scenarios.
-- A total dataset of 1000+ images was used.
-- Data includes variations such as:
-  - Different lighting conditions
-  - Background noise
-  - Orientation and shape differences
+![Result 1](result_images/20260614_03h58m40s_grim.png)
+*Sample detection output with bounding box and classification result.*
 
-### 2. Annotation
-- Bounding boxes were manually labeled for each hazelnut.
-- Each hazelnut instance was annotated as an object.
-- Annotation was performed directly in Roboflow.
+![Result 2](result_images/Screenshot%202026-06-24%20at%2016.52.23.png)
+*Example UI overlay showing detected hazelnut type.*
 
-### 3. Preprocessing
-- Auto-orientation applied.
-- Image resizing (e.g., 640x640 for detection).
-- Normalization handled automatically by Roboflow.
+![Result 3](result_images/Screenshot%202026-06-24%20at%2016.52.54.png)
+*Another run showing the system's live classification feedback.*
 
-### 4. Data Augmentation
-To improve generalization:
-- Rotation
-- Horizontal/vertical flips
-- Brightness & contrast adjustments
-- Zoom and scaling transformations
+![Result 4](result_images/Screenshot%202026-06-24%20at%2016.53.54.png)
+*Final example illustrating the real-time bounding box and decision visualization.*
 
-### 5. Model Training
-**Detection Model**
-- **Model Type:** YOLOv8
-- **Task:** Object Detection
-- **Output:** Bounding boxes + confidence scores
+## Model Training and Deployment
 
-**Classification Model**
-- **Task:** Image Classification
-- **Input:** Cropped hazelnut images from the detection stage
-- **Output:** Class probabilities (e.g., Palaz, Çakıldak, Uzun Musa, Yassı Badem)
+The detection and classification models were trained using Roboflow with a complete pipeline that includes dataset preparation, annotation, augmentation, and deployment.
 
-### 6. Deployment
-- Models were deployed via Roboflow Inference API.
-- Integrated directly into the Python pipeline.
-- Real-time inference achieved through API calls.
+### Training Workflow
+- Dataset contains hazelnut images across lighting and orientation variations.
+- Bounding boxes were annotated in Roboflow.
+- Data augmentation included rotations, flips, brightness changes, and zoom.
+- Detection model is trained for object localization.
+- Classification model is trained on cropped hazelnut images.
 
-##  Key Technologies
-- **Python 3**
-- **Roboflow Inference:** For running machine learning models.
-- **OpenCV:** For image processing and real-time display.
-- **Supervision:** For handling analytic data in the computer vision pipeline.
+### Deployment
+- Models are deployed through Roboflow Inference.
+- The Python pipeline sends images directly to the API for real-time inference.
 
-## 🛠 Setup and Execution
+## Key Technologies
+- Python 3
+- Roboflow Inference
+- OpenCV
+- Optional UI support via `ui_camera.py` and `ui_batch.py`
+
+## Setup and Execution
 
 ### Prerequisites
-Make sure to install the required dependencies before running the application. (If necessary, add your Roboflow API Key inside `config.py`).
-
 1. Clone the repository:
    ```bash
    git clone <repository_url>
    cd detection_hazelnut
    ```
-
-2. Install the required libraries in your virtual environment:
+2. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-
 3. Run the application:
    ```bash
    python main.py
    ```
-*(You can press `ESC` or `Q` to close the application.)*
 
-##  Configuration & Integration
-To alter the behavior of the system, update the `MODE` variable in `config.py`. This adjusts operational limits according to your device's processing capabilities:
-- `MODE = "desktop"` (Optimized default thresholds for high-performance desktop processing)
-- `MODE = "raspberry_pi"` (More lenient thresholds optimized for low-end hardware)
+### Configuration
+Set `MODE` in `config.py`:
+- `MODE = "desktop"` for desktop usage.
+- `MODE = "raspberry_pi"` for low-power hardware.
 
----
-*This project serves as an example of a modular pipeline composed of independent and expandable components.*
+## Notes
+- Replace the placeholder Roboflow API key in `config.py` with your own key for inference to work.
+- Press `ESC` or `Q` to close the live display.
+- `result_images/` contains example output screenshots and sample results.
