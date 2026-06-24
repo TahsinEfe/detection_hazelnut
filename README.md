@@ -49,6 +49,9 @@ Below are sample outputs from the pipeline, using the images stored in `result_i
 ![Result 4](result_images/Screenshot%202026-06-24%20at%2016.53.54.png)
 *Final example illustrating the real-time bounding box and decision visualization.*
 
+![Result 5](result_images/Screenshot%202026-06-24%20at%2017.04.47.png)
+*Updated result showing the latest detection and classification output.*
+
 ## Model Training and Deployment
 
 The detection and classification models were trained using Roboflow with a complete pipeline that includes dataset preparation, annotation, augmentation, and deployment.
