@@ -1,7 +1,10 @@
 import os
 import cv2
 import warnings
+import serial
+import time
 
+# ENV SETTINGS 
 os.environ["CORE_MODEL_SAM_ENABLED"] = "False"
 os.environ["CORE_MODEL_GAZE_ENABLED"] = "False"
 os.environ["CORE_MODEL_YOLO_WORLD_ENABLED"] = "False"
@@ -10,38 +13,39 @@ os.environ["ONNXRUNTIME_EXECUTION_PROVIDERS"] = "CPUExecutionProvider"
 warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-from config import (
-    ROBOFLOW_API_KEY,
-    DETECTOR_MODEL_ID,
-    TYPE_MODEL_ID,
-    DET_THRESHOLD,
-    TYPE_THRESHOLD,
-    MIN_BBOX_AREA,
-    MAX_BBOX_AREA,
-    MIN_ASPECT_RATIO,
-    MAX_ASPECT_RATIO,
-    CROP_PADDING,
-    PREPARED_TARGET_SIZE,
-    PREPARED_PADDING_RATIO,
-    FRAME_SKIP,
-    CAMERA_INDEX,
-    MIN_TYPE_MARGIN
-)
+from config import *
 from detector import HazelnutDetector
 from classifier import HazelnutClassifier
 from decision import DecisionEngine
 
+# SERIAL CONNECTION 
+arduino = serial.Serial('COM4', 9600)
+time.sleep(2)
+
+# ARDUINO SEND FUNCTION
+def send_to_arduino(label):
+    if label == "palaz":
+        arduino.write(b'0\n')
+    elif label == "cakildak":
+        arduino.write(b'1\n')
+    elif label == "uzun_musa":
+        arduino.write(b'2\n')
+    elif label == "yassi_badem":
+        arduino.write(b'3\n')
+
 
 def main():
-    os.environ["********"] = ROBOFLOW_API_KEY
+    os.environ["lGKRPz7FyqhlJrN2N1BE"] = ROBOFLOW_API_KEY
 
     print("Loading models...")
     detector = HazelnutDetector(DETECTOR_MODEL_ID)
+
     classifier = HazelnutClassifier(
         TYPE_MODEL_ID,
         target_size=PREPARED_TARGET_SIZE,
         padding_ratio=PREPARED_PADDING_RATIO
     )
+
     decision_engine = DecisionEngine(
         det_threshold=DET_THRESHOLD,
         type_threshold=TYPE_THRESHOLD,
@@ -52,6 +56,7 @@ def main():
         crop_padding=CROP_PADDING,
         min_type_margin=MIN_TYPE_MARGIN
     )
+
     print("Models loaded.")
 
     cap = cv2.VideoCapture(CAMERA_INDEX)
@@ -64,6 +69,10 @@ def main():
     current_label = "waiting..."
     current_box = None
     current_info = "Press Q or ESC to quit"
+
+    last_sent = None
+    stable_count = 0
+    REQUIRED_STABLE = 3  
 
     try:
         while True:
@@ -83,6 +92,7 @@ def main():
                         current_label = "invalid"
                         current_box = None
                         current_info = detection_eval["reason"]
+
                     else:
                         x1, y1, x2, y2 = detection_eval["bbox"]
                         crop = frame[y1:y2, x1:x2]
@@ -91,11 +101,25 @@ def main():
                             current_label = "invalid"
                             current_box = None
                             current_info = "Empty crop"
+
                         else:
                             classification_result = classifier.classify(crop)
                             final_eval = decision_engine.evaluate_classification(classification_result)
 
-                            current_label = final_eval["final_decision"]
+                            new_label = final_eval["final_decision"]
+
+                            if new_label == current_label:
+                                stable_count += 1
+                            else:
+                                stable_count = 0
+
+                            current_label = new_label
+
+                            if stable_count >= REQUIRED_STABLE and current_label != last_sent:
+                                print(f"Sending to Arduino: {current_label}")
+                                send_to_arduino(current_label)
+                                last_sent = current_label
+
                             current_box = (x1, y1, x2, y2)
                             current_info = final_eval["reason"]
 
@@ -104,6 +128,7 @@ def main():
                     current_box = None
                     current_info = str(e)
 
+            # DISPLAY 
             display = frame.copy()
 
             if current_box is not None:
@@ -146,6 +171,7 @@ def main():
         cap.release()
         cv2.destroyAllWindows()
         print("Camera and windows released.")
+
 
 if __name__ == "__main__":
     main()
